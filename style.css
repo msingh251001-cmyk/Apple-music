@@ -38,28 +38,28 @@ body {
   display: flex; align-items: center; justify-content: space-between;
   padding: 15px 20px;
   backdrop-filter: blur(20px);
-  background: rgba(11, 13, 18, 0.8);
+  background: rgba(11, 13, 18, 0.85);
   position: sticky; top: 0; z-index: 100;
 }
 
-.logo { font-size: 1.3rem; font-weight: 700; color: #1db954; cursor: pointer; }
+.logo { font-size: 1.2rem; font-weight: 700; color: #1db954; cursor: pointer; white-space: nowrap; }
 
 .search-box {
   background: rgba(255, 255, 255, 0.12);
   padding: 8px 15px; border-radius: 20px;
-  display: flex; align-items: center; width: 60%;
+  display: flex; align-items: center; width: 65%;
 }
 
 .search-box input {
   background: transparent; border: none; outline: none;
-  color: #fff; margin-left: 10px; width: 100%; font-size: 0.9rem;
+  color: #fff; margin-left: 10px; width: 100%; font-size: 0.88rem;
 }
 
 .icon-btn { background: transparent; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; }
 
 .content-area { padding: 15px 20px; }
 
-/* Filter Chips (Image 3 Style) */
+/* Filter Chips */
 .filter-chips {
   display: flex; gap: 10px; overflow-x: auto; margin-bottom: 20px; scrollbar-width: none;
 }
@@ -83,7 +83,7 @@ body {
   border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
 }
 
-/* Track Row (Spotify List Style) */
+/* Track Row */
 .track-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px; margin-bottom: 8px; border-radius: 10px;
@@ -96,7 +96,7 @@ body {
 .track-text h4 { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .track-text p { font-size: 0.78rem; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Artist Hero Banner (Image 1 Style) */
+/* Artist Hero Banner */
 .artist-hero {
   position: relative; width: 100%; height: 260px; border-radius: 20px;
   overflow: hidden; margin-bottom: 20px; display: flex; align-items: flex-end; padding: 20px;
@@ -115,7 +115,7 @@ body {
   color: #fff; padding: 8px 20px; border-radius: 20px; font-weight: 600; cursor: pointer;
 }
 
-/* Albums 2-Column Grid (Image 2 Style) */
+/* Albums 2-Column Grid */
 .albums-grid {
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px;
 }
@@ -154,7 +154,6 @@ body {
 .modal-content {
   background: #181b22; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; text-align: center;
 }
-.modal-content select { width: 100%; padding: 10px; margin: 15px 0; border-radius: 8px; background: #222; color: #fff; border: none; }
 
 .menu-action-btn {
   width: 100%; padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.08);
