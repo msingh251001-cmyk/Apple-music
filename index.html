@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spotify & Apple Hybrid Music</title>
+  <title>Punjabi Music Player</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -18,14 +18,13 @@
 
   <div class="app-container">
     
-    <!-- Header -->
+    <!-- Top Bar -->
     <header class="top-bar">
-      <div class="logo" id="home-logo"><i class="fa-brands fa-apple"></i> Music</div>
+      <div class="logo" id="home-logo"><i class="fa-brands fa-apple"></i> Punjabi Music</div>
       <div class="search-box">
         <i class="fas fa-search"></i>
-        <input type="text" id="search-input" placeholder="Search songs, artists, albums...">
+        <input type="text" id="search-input" placeholder="Search Punjabi songs, artists...">
       </div>
-      <button id="settings-btn" class="icon-btn"><i class="fas fa-gear"></i></button>
     </header>
 
     <!-- Dynamic Main Content Area -->
@@ -41,21 +40,7 @@
         <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:15px 0;">
         <button id="btn-play-next" class="menu-action-btn"><i class="fas fa-forward"></i> Play Next</button>
         <button id="btn-add-queue" class="menu-action-btn"><i class="fas fa-list"></i> Add to Queue</button>
-        <button id="close-context" class="primary-btn" style="margin-top:15px; background:#333;">Cancel</button>
-      </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div class="modal" id="settings-modal">
-      <div class="modal-content">
-        <h3>Content Language</h3>
-        <p>Select your music preference:</p>
-        <select id="language-select">
-          <option value="punjabi" selected>Punjabi</option>
-          <option value="hindi">Hindi</option>
-          <option value="english">English</option>
-        </select>
-        <button id="close-settings" class="primary-btn">Save & Apply</button>
+        <button id="close-context" class="primary-btn" style="margin-top:15px; background:#333; color:#fff;">Cancel</button>
       </div>
     </div>
 
@@ -111,8 +96,8 @@
     <div class="mini-player" id="mini-player">
       <img src="https://via.placeholder.com/50" id="mini-cover" alt="Cover">
       <div class="mini-info">
-        <h4 id="mini-title">Select a Song</h4>
-        <p id="mini-artist">Spotify & Apple Style</p>
+        <h4 id="mini-title">Select a Punjabi Song</h4>
+        <p id="mini-artist">Latest Hits</p>
       </div>
       <div class="mini-controls">
         <button id="mini-play-btn"><i class="fas fa-play"></i></button>
