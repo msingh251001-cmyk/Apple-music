@@ -1,6 +1,6 @@
 const audioElement = document.getElementById('audio-element');
 
-// UI Elements
+// Elements
 const mainContent = document.getElementById('main-content');
 const searchInput = document.getElementById('search-input');
 const settingsBtn = document.getElementById('settings-btn');
@@ -31,7 +31,6 @@ const volumeBar = document.getElementById('volume-bar');
 const currentTimeEl = document.getElementById('current-time');
 const totalDurationEl = document.getElementById('total-duration');
 
-// Queue & Context Menu Elements
 const queueBtn = document.getElementById('queue-btn');
 const queueSheet = document.getElementById('queue-sheet');
 const closeQueue = document.getElementById('close-queue');
@@ -48,201 +47,254 @@ let currentQueue = [];
 let currentSongIndex = 0;
 let selectedContextSong = null;
 
-// High Quality Full Audio Fetcher
+// Reliable Direct Full-Length Audio Engine (JioSaavn CDN API)
 async function fetchSongs(query, limit = 20) {
   try {
     const res = await fetch(`https://saavn.dev/api/search/songs?query=${encodeURIComponent(query)}&limit=${limit}`);
     const data = await res.json();
     
-    if (data.success && data.data.results.length > 0) {
+    if (data.success && data.data && data.data.results && data.data.results.length > 0) {
       return data.data.results.map(song => {
-        const downloadUrl = song.downloadUrl ? (song.downloadUrl[song.downloadUrl.length - 1]?.url || song.downloadUrl[0]?.url) : '';
-        const image = song.image ? (song.image[song.image.length - 1]?.url || song.image[0]?.url) : '';
-        
+        let streamUrl = '';
+        if (song.downloadUrl && song.downloadUrl.length > 0) {
+          // Select highest 320kbps / 160kbps audio link
+          const bestQuality = song.downloadUrl.find(d => d.quality === '320kbps') || song.downloadUrl[song.downloadUrl.length - 1];
+          streamUrl = bestQuality?.url || song.downloadUrl[0]?.url;
+        }
+
+        let imgUrl = '';
+        if (song.image && song.image.length > 0) {
+          const bestImg = song.image.find(i => i.quality === '500x500') || song.image[song.image.length - 1];
+          imgUrl = bestImg?.url || song.image[0]?.url;
+        }
+
         return {
-          title: song.name.replace(/&quot;/g, '"').replace(/&amp;/g, '&'),
-          artist: song.primaryArtists || "Unknown Artist",
+          id: song.id,
+          title: song.name ? song.name.replace(/&quot;/g, '"').replace(/&amp;/g, '&') : "Unknown Track",
+          artist: song.primaryArtists || song.artists?.primary[0]?.name || "Popular Artist",
           album: song.album?.name || "Single",
-          cover: image,
-          src: downloadUrl,
-          year: song.year || ''
+          cover: imgUrl || "https://picsum.photos/300/300",
+          src: streamUrl
         };
-      });
-    } else {
-      return await fallbackiTunesFetch(query, limit);
+      }).filter(s => s.src && s.src.endsWith('.mp3') || s.src.includes('cdn'));
     }
   } catch (e) {
-    return await fallbackiTunesFetch(query, limit);
+    console.error("Fetch Error:", e);
   }
+  return [];
 }
 
-async function fallbackiTunesFetch(query, limit) {
-  try {
-    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=${limit}`);
-    const data = await response.json();
-    return data.results.map(track => ({
-      title: track.trackName,
-      artist: track.artistName,
-      album: track.collectionName,
-      cover: track.artworkUrl100.replace('100x100bb', '400x400bb'),
-      src: track.previewUrl,
-      year: track.releaseDate ? track.releaseDate.substring(0, 4) : ''
-    }));
-  } catch (err) {
-    return [];
-  }
+// 1. Home Page View
+async function loadHomeContent() {
+  const lang = languageSelect.value;
+  mainContent.innerHTML = `
+    <section style="margin-bottom:25px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2>Latest Releases</h2>
+        <button id="see-latest" style="background:none; border:none; color:#1db954; cursor:pointer;">See All ></button>
+      </div>
+      <div class="horizontal-scroll" id="latest-releases">Loading full tracks...</div>
+    </section>
+
+    <section style="margin-bottom:25px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2>Trending Now</h2>
+        <button id="see-trending" style="background:none; border:none; color:#1db954; cursor:pointer;">See All ></button>
+      </div>
+      <div class="horizontal-scroll" id="trending-songs">Loading full tracks...</div>
+    </section>
+  `;
+
+  document.getElementById('see-latest').onclick = () => renderSearchPage(`${lang} latest hits`);
+  document.getElementById('see-trending').onclick = () => renderSearchPage(`${lang} top songs`);
+
+  const latest = await fetchSongs(`${lang} latest hits`, 10);
+  const trending = await fetchSongs(`${lang} top songs`, 10);
+
+  renderHorizontalCards('latest-releases', latest);
+  renderHorizontalCards('trending-songs', trending);
 }
 
-// 1. Render Cards with 3-Dots Button
-function renderCardsList(containerId, songs) {
+function renderHorizontalCards(containerId, songs) {
   const container = document.getElementById(containerId);
   if (!container) return;
   container.innerHTML = '';
 
-  songs.forEach((song, index) => {
+  songs.forEach((song, idx) => {
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `
-      <img src="${song.cover}" alt="Cover">
-      <div class="card-more-btn" data-index="${index}"><i class="fas fa-ellipsis-v"></i></div>
+      <img src="${song.cover}">
       <h4>${song.title}</h4>
       <p>${song.artist}</p>
     `;
-
-    card.onclick = (e) => {
-      if (e.target.closest('.card-more-btn')) {
-        e.stopPropagation();
-        openContextMenu(song);
-        return;
-      }
-      currentQueue = [...songs];
-      currentSongIndex = index;
-      loadSong(song);
-      playSong();
-    };
+    card.onclick = () => playFromList(songs, idx);
     container.appendChild(card);
   });
 }
 
-// Context Menu (3 Dots Popup)
-function openContextMenu(song) {
-  selectedContextSong = song;
-  contextSongTitle.innerText = song.title;
-  contextSongArtist.innerText = song.artist;
-  contextModal.style.display = 'flex';
-}
+// 2. Spotify Search View (Image 3)
+async function renderSearchPage(query) {
+  mainContent.innerHTML = `
+    <!-- Category Chips (Image 3) -->
+    <div class="filter-chips">
+      <button class="chip active">Top</button>
+      <button class="chip">Tracks</button>
+      <button class="chip">Playlists</button>
+      <button class="chip">Artists</button>
+    </div>
 
-closeContext.onclick = () => contextModal.style.display = 'none';
+    <div id="search-body">Loading...</div>
+  `;
 
-btnPlayNext.onclick = () => {
-  if (selectedContextSong) {
-    currentQueue.splice(currentSongIndex + 1, 0, selectedContextSong);
-    contextModal.style.display = 'none';
-    renderQueueList();
-  }
-};
+  const results = await fetchSongs(query, 25);
+  const searchBody = document.getElementById('search-body');
+  if (!searchBody) return;
 
-btnAddQueue.onclick = () => {
-  if (selectedContextSong) {
-    currentQueue.push(selectedContextSong);
-    contextModal.style.display = 'none';
-    renderQueueList();
-  }
-};
-
-// Queue Sheet Logic
-queueBtn.onclick = () => {
-  renderQueueList();
-  queueSheet.classList.add('active');
-};
-closeQueue.onclick = () => queueSheet.classList.remove('active');
-
-function renderQueueList() {
-  queueListContainer.innerHTML = '';
-  if (currentQueue.length === 0) {
-    queueListContainer.innerHTML = '<p style="color:#aaa; text-align:center; padding:20px;">Queue is Empty</p>';
+  if (results.length === 0) {
+    searchBody.innerHTML = '<p style="color:#aaa;">No tracks found.</p>';
     return;
   }
 
-  currentQueue.forEach((song, idx) => {
-    const item = document.createElement('div');
-    const isPlaying = idx === currentSongIndex;
-    item.style.cssText = `display:flex; align-items:center; justify-content:space-between; padding:10px; margin-bottom:8px; border-radius:10px; background:${isPlaying ? 'rgba(250, 45, 72, 0.2)' : 'rgba(255,255,255,0.05)'};`;
-    item.innerHTML = `
-      <div style="display:flex; align-items:center; gap:12px;">
-        <img src="${song.cover}" style="width:40px; height:40px; border-radius:6px;">
-        <div>
-          <h4 style="font-size:0.85rem; color:${isPlaying ? '#fa2d48' : '#fff'};">${song.title}</h4>
-          <p style="font-size:0.75rem; color:#aaa;">${song.artist}</p>
+  const topResult = results[0];
+
+  searchBody.innerHTML = `
+    <h3 style="margin-bottom:12px; font-size:1.1rem;">Top result</h3>
+    <div class="top-result-card" id="top-card">
+      <div>
+        <h3>${topResult.artist}</h3>
+        <p>Artist</p>
+      </div>
+      <div class="play-green-circle"><i class="fas fa-play"></i></div>
+    </div>
+
+    <h3 style="margin-bottom:12px; font-size:1.1rem;">Tracks</h3>
+    <div id="search-tracks-list"></div>
+  `;
+
+  // Click on Top Result opens Artist Profile
+  document.getElementById('top-card').onclick = () => renderArtistProfile(topResult.artist, results);
+
+  // Render Tracks List
+  const tracksListContainer = document.getElementById('search-tracks-list');
+  results.forEach((song, idx) => {
+    const row = document.createElement('div');
+    row.className = 'track-row';
+    row.innerHTML = `
+      <div class="track-info">
+        <img src="${song.cover}">
+        <div class="track-text">
+          <h4>${song.title}</h4>
+          <p>${song.artist}</p>
         </div>
       </div>
-      ${isPlaying ? '<i class="fas fa-wave-square" style="color:#fa2d48;"></i>' : ''}
+      <i class="fas fa-ellipsis-v three-dots-btn" style="padding:10px; color:#aaa;"></i>
     `;
-    item.onclick = () => {
-      currentSongIndex = idx;
-      loadSong(song);
-      playSong();
+
+    row.onclick = (e) => {
+      if (e.target.classList.contains('three-dots-btn')) {
+        e.stopPropagation();
+        openContextMenu(song);
+        return;
+      }
+      playFromList(results, idx);
     };
-    queueListContainer.appendChild(item);
+    tracksListContainer.appendChild(row);
   });
 }
 
-// Home Page Load
-async function loadHomeContent() {
-  const lang = languageSelect.value;
-  mainContent.innerHTML = `
-    <section class="section">
-      <div class="section-header">
-        <h2>Latest Releases</h2>
-        <button class="see-all-btn" id="see-all-latest">See All <i class="fas fa-chevron-right"></i></button>
-      </div>
-      <div class="horizontal-scroll" id="latest-releases">Loading...</div>
-    </section>
+// 3. Spotify Artist Profile View (Image 1 & 2)
+function renderArtistProfile(artistName, songs) {
+  const topTracks = songs.slice(0, 5);
+  
+  // Grouping albums
+  const albumsMap = {};
+  songs.forEach(s => {
+    if (!albumsMap[s.album]) albumsMap[s.album] = s;
+  });
 
-    <section class="section">
-      <div class="section-header">
-        <h2>Trending Now</h2>
-        <button class="see-all-btn" id="see-all-trending">See All <i class="fas fa-chevron-right"></i></button>
+  const heroImage = songs[0]?.cover || "https://picsum.photos/600/400";
+
+  mainContent.innerHTML = `
+    <!-- Hero Banner (Image 1) -->
+    <div class="artist-hero" style="background-image: url('${heroImage}');">
+      <div class="artist-hero-overlay"></div>
+      <div class="artist-hero-content">
+        <h1>${artistName}</h1>
+        <div class="artist-actions">
+          <button class="follow-btn">Follow</button>
+          <i class="fas fa-ellipsis-v" style="font-size:1.2rem; color:#aaa;"></i>
+          <div class="play-green-circle" id="artist-shuffle-play" style="margin-left:auto;"><i class="fas fa-play"></i></div>
+        </div>
       </div>
-      <div class="horizontal-scroll" id="trending-songs">Loading...</div>
-    </section>
+    </div>
+
+    <!-- Popular Section -->
+    <h3 style="margin-bottom:12px; font-size:1.2rem;">Popular</h3>
+    <div id="artist-popular-list"></div>
+    <button class="see-all-outline" id="see-all-popular">See all</button>
+
+    <!-- Albums Section (Image 2) -->
+    <h3 style="margin:20px 0 12px 0; font-size:1.2rem;">Albums</h3>
+    <div class="albums-grid" id="artist-albums-grid"></div>
   `;
 
-  document.getElementById('see-all-latest').onclick = () => loadFullGrid(`${lang} latest hits`, "Latest Releases");
-  document.getElementById('see-all-trending').onclick = () => loadFullGrid(`${lang} top trending`, "Trending Songs");
+  document.getElementById('artist-shuffle-play').onclick = () => playFromList(songs, 0);
 
-  const latest = await fetchSongs(`${lang} latest hits`, 10);
-  const trending = await fetchSongs(`${lang} top trending`, 10);
+  // Render Popular 5 Tracks
+  const popularContainer = document.getElementById('artist-popular-list');
+  topTracks.forEach((song, idx) => {
+    const row = document.createElement('div');
+    row.className = 'track-row';
+    row.innerHTML = `
+      <div class="track-info">
+        <img src="${song.cover}">
+        <div class="track-text">
+          <h4>${song.title}</h4>
+          <p>${song.artist}</p>
+        </div>
+      </div>
+      <i class="fas fa-ellipsis-v three-dots-btn" style="padding:10px; color:#aaa;"></i>
+    `;
+    row.onclick = (e) => {
+      if (e.target.classList.contains('three-dots-btn')) {
+        e.stopPropagation();
+        openContextMenu(song);
+        return;
+      }
+      playFromList(topTracks, idx);
+    };
+    popularContainer.appendChild(row);
+  });
 
-  renderCardsList('latest-releases', latest);
-  renderCardsList('trending-songs', trending);
+  // Render Albums Grid
+  const albumGrid = document.getElementById('artist-albums-grid');
+  Object.values(albumsMap).forEach(alb => {
+    const card = document.createElement('div');
+    card.className = 'album-card';
+    card.innerHTML = `
+      <div class="album-card-img-wrapper">
+        <img src="${alb.cover}">
+        <div class="album-play-icon"><i class="fas fa-play" style="font-size:0.8rem;"></i></div>
+      </div>
+      <h4>${alb.album}</h4>
+      <p>${alb.artist}</p>
+    `;
+    card.onclick = () => playFromList(songs.filter(s => s.album === alb.album), 0);
+    albumGrid.appendChild(card);
+  });
+
+  document.getElementById('see-all-popular').onclick = () => renderSearchPage(artistName);
 }
 
-// See All Full Grid View
-async function loadFullGrid(query, title) {
-  mainContent.innerHTML = `<h2>${title}</h2><div class="grid-layout" id="full-grid">Loading...</div>`;
-  const songs = await fetchSongs(query, 40);
-  renderCardsList('full-grid', songs);
+// 4. Play Control & Queue Management
+function playFromList(list, index) {
+  currentQueue = [...list];
+  currentSongIndex = index;
+  loadSong(currentQueue[currentSongIndex]);
+  playSong();
 }
 
-// Search Handler
-let searchTimeout;
-searchInput.addEventListener('input', (e) => {
-  clearTimeout(searchTimeout);
-  const query = e.target.value.trim();
-  if (query.length > 2) {
-    searchTimeout = setTimeout(async () => {
-      mainContent.innerHTML = `<p>Searching for "${query}"...</p>`;
-      const results = await fetchSongs(query, 30);
-      mainContent.innerHTML = `<h2>Results for "${query}"</h2><div class="grid-layout" id="search-grid"></div>`;
-      renderCardsList('search-grid', results);
-    }, 400);
-  } else if (query.length === 0) {
-    loadHomeContent();
-  }
-});
-
-// Player Logic & MediaSession
 function loadSong(song) {
   if (!song || !song.src) return;
   audioElement.src = song.src;
@@ -280,16 +332,53 @@ function playPrev() {
 function playNext() {
   if (currentQueue.length === 0) return;
   currentSongIndex = (currentSongIndex + 1) % currentQueue.length;
-  loadSong(currentQueue[currentQueue.length > currentSongIndex ? currentSongIndex : 0]);
+  loadSong(currentQueue[currentSongIndex]);
   playSong();
 }
 
+// Context Menu (3 Dots Popup)
+function openContextMenu(song) {
+  selectedContextSong = song;
+  contextSongTitle.innerText = song.title;
+  contextSongArtist.innerText = song.artist;
+  contextModal.style.display = 'flex';
+}
+
+closeContext.onclick = () => contextModal.style.display = 'none';
+
+btnPlayNext.onclick = () => {
+  if (selectedContextSong) {
+    currentQueue.splice(currentSongIndex + 1, 0, selectedContextSong);
+    contextModal.style.display = 'none';
+  }
+};
+
+btnAddQueue.onclick = () => {
+  if (selectedContextSong) {
+    currentQueue.push(selectedContextSong);
+    contextModal.style.display = 'none';
+  }
+};
+
+// Search Bar Realtime Trigger
+let searchTimeout;
+searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const query = e.target.value.trim();
+  if (query.length > 2) {
+    searchTimeout = setTimeout(() => renderSearchPage(query), 400);
+  } else if (query.length === 0) {
+    loadHomeContent();
+  }
+});
+
+// Background Lock Screen Session
 function updateMediaSession(song) {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song.title,
       artist: song.artist,
-      album: song.album || 'Apple Music Web Player',
+      album: song.album || 'Spotify Music',
       artwork: [{ src: song.cover, sizes: '512x512', type: 'image/jpeg' }]
     });
 
@@ -301,6 +390,7 @@ function updateMediaSession(song) {
 }
 
 function formatTime(secs) {
+  if (isNaN(secs)) return "0:00";
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s < 10 ? '0' : ''}${s}`;
@@ -327,6 +417,42 @@ miniPlayer.onclick = (e) => {
 };
 closePlayer.onclick = () => playerOverlay.classList.remove('active');
 
+queueBtn.onclick = () => {
+  renderQueueList();
+  queueSheet.classList.add('active');
+};
+closeQueue.onclick = () => queueSheet.classList.remove('active');
+
+function renderQueueList() {
+  queueListContainer.innerHTML = '';
+  if (currentQueue.length === 0) {
+    queueListContainer.innerHTML = '<p style="color:#aaa; text-align:center; padding:20px;">Queue is Empty</p>';
+    return;
+  }
+  currentQueue.forEach((song, idx) => {
+    const item = document.createElement('div');
+    const isPlaying = idx === currentSongIndex;
+    item.className = 'track-row';
+    item.style.background = isPlaying ? 'rgba(29, 185, 84, 0.15)' : 'rgba(255,255,255,0.03)';
+    item.innerHTML = `
+      <div class="track-info">
+        <img src="${song.cover}">
+        <div class="track-text">
+          <h4 style="color:${isPlaying ? '#1db954' : '#fff'}">${song.title}</h4>
+          <p>${song.artist}</p>
+        </div>
+      </div>
+      ${isPlaying ? '<i class="fas fa-volume-high" style="color:#1db954;"></i>' : ''}
+    `;
+    item.onclick = () => {
+      currentSongIndex = idx;
+      loadSong(song);
+      playSong();
+    };
+    queueListContainer.appendChild(item);
+  });
+}
+
 audioElement.ontimeupdate = () => {
   if (audioElement.duration) {
     seekBar.value = (audioElement.currentTime / audioElement.duration) * 100;
@@ -338,4 +464,5 @@ audioElement.ontimeupdate = () => {
 seekBar.oninput = () => audioElement.currentTime = (seekBar.value / 100) * audioElement.duration;
 volumeBar.oninput = () => audioElement.volume = volumeBar.value;
 
+// App Load
 loadHomeContent();
