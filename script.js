@@ -1,6 +1,7 @@
 const audioElement = document.getElementById('audio-element');
 
-// Settings Elements
+// UI Elements
+const searchInput = document.getElementById('search-input');
 const settingsBtn = document.getElementById('settings-btn');
 const settingsModal = document.getElementById('settings-modal');
 const closeSettings = document.getElementById('close-settings');
@@ -28,48 +29,99 @@ const miniCover = document.getElementById('mini-cover');
 const seekBar = document.getElementById('seek-bar');
 const volumeBar = document.getElementById('volume-bar');
 
-// Sample Playlists / Song Feeds (Simulated Content Stream)
-let songsList = [
-  {
-    title: "Punjabi Vibe 1",
-    artist: "Karan Aujla Style",
-    cover: "https://picsum.photos/300/300?random=1",
-    src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    lang: "punjabi"
-  },
-  {
-    title: "Punjabi Vibe 2",
-    artist: "Diljit Dosanjh Style",
-    cover: "https://picsum.photos/300/300?random=2",
-    src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    lang: "punjabi"
-  },
-  {
-    title: "Hindi Melody",
-    artist: "Arijit Singh Style",
-    cover: "https://picsum.photos/300/300?random=3",
-    src: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    lang: "hindi"
-  }
-];
-
+let currentPlaylist = [];
 let currentSongIndex = 0;
 
-// 1. Settings Modal Controls
+// iTunes/Apple Free API Integration (Instant Realtime Songs)
+async function fetchSongs(query) {
+  try {
+    const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=15`);
+    const data = await response.json();
+    return data.results.map(track => ({
+      title: track.trackName,
+      artist: track.artistName,
+      cover: track.artworkUrl100.replace('100x100bb', '400x400bb'),
+      src: track.previewUrl
+    }));
+  } catch (error) {
+    console.error("Error fetching music:", error);
+    return [];
+  }
+}
+
+// Render Content Dynamically Based on Language Setting
+async function loadHomeContent() {
+  const lang = languageSelect.value;
+  
+  // Fetch Real Latest & Trending Songs
+  const latestSongs = await fetchSongs(`${lang} latest hits`);
+  const trendingSongs = await fetchSongs(`${lang} top songs`);
+
+  if (latestSongs.length > 0) {
+    currentPlaylist = latestSongs;
+    renderCards('latest-releases', latestSongs);
+  }
+
+  if (trendingSongs.length > 0) {
+    renderCards('trending-songs', trendingSongs);
+  }
+}
+
+function renderCards(containerId, songs) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  songs.forEach((song, index) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${song.cover}" alt="Cover">
+      <h4>${song.title}</h4>
+      <p>${song.artist}</p>
+    `;
+    card.onclick = () => {
+      currentPlaylist = songs;
+      currentSongIndex = index;
+      loadSong(song);
+      playSong();
+    };
+    container.appendChild(card);
+  });
+}
+
+// Realtime Live Search
+let searchTimeout;
+searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const query = e.target.value.trim();
+  if (query.length > 2) {
+    searchTimeout = setTimeout(async () => {
+      const results = await fetchSongs(query);
+      if (results.length > 0) {
+        currentPlaylist = results;
+        renderCards('latest-releases', results);
+      }
+    }, 400);
+  } else if (query.length === 0) {
+    loadHomeContent();
+  }
+});
+
+// Settings & Player Modal Logic
 settingsBtn.onclick = () => settingsModal.style.display = 'flex';
 closeSettings.onclick = () => {
   settingsModal.style.display = 'none';
-  renderContent(); // Apply language filter refresh
+  loadHomeContent();
 };
 
-// 2. Open / Close Player Overlay
 miniPlayer.onclick = (e) => {
   if (e.target.closest('#mini-play-btn')) return;
   playerOverlay.classList.add('active');
 };
 closePlayer.onclick = () => playerOverlay.classList.remove('active');
 
-// 3. MediaSession API (Crutial for Lock Screen & Background Audio Play)
+// MediaSession API (Background Play & Lock Screen Controls)
 function updateMediaSession(song) {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -86,8 +138,9 @@ function updateMediaSession(song) {
   }
 }
 
-// 4. Playback Logic
+// Player Functions
 function loadSong(song) {
+  if (!song || !song.src) return;
   audioElement.src = song.src;
   playerTitle.innerText = song.title;
   playerArtist.innerText = song.artist;
@@ -113,14 +166,16 @@ function pauseSong() {
 }
 
 function playPrev() {
-  currentSongIndex = (currentSongIndex - 1 + songsList.length) % songsList.length;
-  loadSong(songsList[currentSongIndex]);
+  if (currentPlaylist.length === 0) return;
+  currentSongIndex = (currentSongIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+  loadSong(currentPlaylist[currentSongIndex]);
   playSong();
 }
 
 function playNext() {
-  currentSongIndex = (currentSongIndex + 1) % songsList.length;
-  loadSong(songsList[currentSongIndex]);
+  if (currentPlaylist.length === 0) return;
+  currentSongIndex = (currentSongIndex + 1) % currentPlaylist.length;
+  loadSong(currentPlaylist[currentSongIndex]);
   playSong();
 }
 
@@ -129,7 +184,9 @@ miniPlayBtn.onclick = () => audioElement.paused ? playSong() : pauseSong();
 prevBtn.onclick = playPrev;
 nextBtn.onclick = playNext;
 
-// 5. Seek & Volume Bar
+audioElement.onended = playNext;
+
+// Seek & Volume
 audioElement.ontimeupdate = () => {
   if (audioElement.duration) {
     seekBar.value = (audioElement.currentTime / audioElement.duration) * 100;
@@ -144,33 +201,5 @@ volumeBar.oninput = () => {
   audioElement.volume = volumeBar.value;
 };
 
-// 6. Dynamic Content Renderer (Language Filtered)
-function renderContent() {
-  const selectedLang = languageSelect.value;
-  const filtered = songsList.filter(s => s.lang === selectedLang);
-
-  const latestContainer = document.getElementById('latest-releases');
-  latestContainer.innerHTML = '';
-
-  const activeList = filtered.length > 0 ? filtered : songsList;
-
-  activeList.forEach((song, index) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <img src="${song.cover}" alt="Cover">
-      <h4>${song.title}</h4>
-      <p>${song.artist}</p>
-    `;
-    card.onclick = () => {
-      currentSongIndex = index;
-      loadSong(song);
-      playSong();
-    };
-    latestContainer.appendChild(card);
-  });
-}
-
 // Initial Load
-loadSong(songsList[0]);
-renderContent();
+loadHomeContent();
