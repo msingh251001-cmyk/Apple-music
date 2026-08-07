@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple Music Web Style</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Liquid Background Gradients -->
+  <div class="liquid-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="app-container">
+    
+    <!-- Top Navigation -->
+    <header class="top-bar">
+      <div class="logo"><i class="fa-brands fa-apple"></i> Music</div>
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="search-input" placeholder="Search songs, artists...">
+      </div>
+      <button id="settings-btn" class="icon-btn"><i class="fas fa-gear"></i></button>
+    </header>
+
+    <!-- Main Home Content -->
+    <main class="content-area">
+      
+      <!-- Latest Songs Section -->
+      <section class="section">
+        <div class="section-header">
+          <h2>Latest Releases</h2>
+          <button class="see-all-btn">See All <i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="horizontal-scroll" id="latest-releases">
+          <!-- Songs populated dynamically -->
+        </div>
+      </section>
+
+      <!-- Trending Songs Section -->
+      <section class="section">
+        <div class="section-header">
+          <h2>Trending Now</h2>
+          <button class="see-all-btn">See All <i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div class="grid-layout" id="trending-songs">
+          <!-- Songs populated dynamically -->
+        </div>
+      </section>
+
+      <!-- Mood Playlists -->
+      <section class="section">
+        <div class="section-header">
+          <h2>Playlists by Mood</h2>
+        </div>
+        <div class="horizontal-scroll" id="mood-playlists">
+          <!-- Playlists populated dynamically -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settings-modal">
+      <div class="modal-content">
+        <h3>Content Language</h3>
+        <p>Select your primary music preference:</p>
+        <select id="language-select">
+          <option value="punjabi" selected>Punjabi</option>
+          <option value="hindi">Hindi</option>
+          <option value="english">English</option>
+        </select>
+        <button id="close-settings" class="primary-btn">Save & Apply</button>
+      </div>
+    </div>
+
+    <!-- Apple Music Full Screen Player Overlay (Hidden by Default) -->
+    <div class="player-overlay" id="player-overlay">
+      <button id="close-player" class="close-btn"><i class="fas fa-chevron-down"></i></button>
+      
+      <div class="player-content">
+        <div class="album-art-container">
+          <img src="https://via.placeholder.com/400" id="player-cover" alt="Album Cover">
+        </div>
+
+        <div class="player-details">
+          <h2 id="player-title">Song Title</h2>
+          <p id="player-artist">Artist Name</p>
+        </div>
+
+        <!-- Seek Bar -->
+        <div class="progress-bar-container">
+          <span id="current-time">0:00</span>
+          <input type="range" id="seek-bar" value="0" min="0" max="100">
+          <span id="total-duration">0:00</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="main-controls">
+          <button id="autoplay-btn" class="icon-btn active" title="Autoplay Similar Songs"><i class="fas fa-infinity"></i></button>
+          <button id="prev-btn" class="icon-btn"><i class="fas fa-step-backward"></i></button>
+          <button id="play-btn" class="play-main-btn"><i class="fas fa-play"></i></button>
+          <button id="next-btn" class="icon-btn"><i class="fas fa-step-forward"></i></button>
+          <button id="queue-btn" class="icon-btn" title="Up Next Queue"><i class="fas fa-list-ul"></i></button>
+        </div>
+
+        <!-- Volume Bar -->
+        <div class="volume-container">
+          <i class="fas fa-volume-low"></i>
+          <input type="range" id="volume-bar" min="0" max="1" step="0.01" value="0.8">
+          <i class="fas fa-volume-high"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mini Player Bar at Bottom -->
+    <div class="mini-player" id="mini-player">
+      <img src="https://via.placeholder.com/50" id="mini-cover" alt="Cover">
+      <div class="mini-info">
+        <h4 id="mini-title">No Song Selected</h4>
+        <p id="mini-artist">Select a song to play</p>
+      </div>
+      <div class="mini-controls">
+        <button id="mini-play-btn"><i class="fas fa-play"></i></button>
+      </div>
+    </div>
+
+    <!-- Hidden Native Audio Element -->
+    <audio id="audio-element"></audio>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+  </html>
