@@ -43,26 +43,33 @@ let currentQueue = [];
 let currentSongIndex = 0;
 let selectedContextSong = null;
 
-// High-Speed Guaranteed Punjabi API
-async function fetchSongs(query, limit = 25) {
-  const searchQuery = query.toLowerCase().includes('punjabi') ? query : `${query} punjabi`;
-  
-  try {
-    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&media=music&entity=song&limit=${limit}`);
-    const data = await res.json();
-    
-    if (data.results && data.results.length > 0) {
-      return data.results.map(track => ({
-        id: track.trackId,
-        title: track.trackName,
-        artist: track.artistName,
-        album: track.collectionName || "Punjabi Single",
-        cover: track.artworkUrl100.replace('100x100bb', '500x500bb'),
-        src: track.previewUrl
-      }));
+// Open Source YouTube Music API (Invidious Engine)
+async function fetchSongs(query) {
+  const searchQuery = query.toLowerCase().includes('punjabi') ? query : `${query} punjabi song`;
+  const instances = [
+    'https://vid.puffyan.us',
+    'https://invidious.nerdvpn.de',
+    'https://inv.tux.pizza'
+  ];
+
+  for (let baseUrl of instances) {
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/search?q=${encodeURIComponent(searchQuery)}&type=video`);
+      const data = await res.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        return data.slice(0, 25).map(item => ({
+          id: item.videoId,
+          title: item.title,
+          artist: item.author || "Punjabi Music",
+          album: "Official Audio",
+          cover: item.videoThumbnails ? (item.videoThumbnails.find(t => t.quality === 'high')?.url || item.videoThumbnails[0].url) : `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`,
+          src: `${baseUrl}/latest_version?id=${item.videoId}&itag=140` // Direct Audio Stream
+        }));
+      }
+    } catch (err) {
+      console.log(`Failed instance ${baseUrl}, switching...`);
     }
-  } catch (e) {
-    console.error("Fetch Error:", e);
   }
   return [];
 }
@@ -75,7 +82,7 @@ async function loadHomeContent() {
         <h2>Punjabi Latest Releases</h2>
         <button id="see-latest" style="background:none; border:none; color:#1db954; cursor:pointer; font-weight:bold;">See All ></button>
       </div>
-      <div class="horizontal-scroll" id="latest-releases">Loading Punjabi songs...</div>
+      <div class="horizontal-scroll" id="latest-releases">Loading Punjabi tracks...</div>
     </section>
 
     <section style="margin-bottom:25px;">
@@ -83,15 +90,15 @@ async function loadHomeContent() {
         <h2>Punjabi Trending Now</h2>
         <button id="see-trending" style="background:none; border:none; color:#1db954; cursor:pointer; font-weight:bold;">See All ></button>
       </div>
-      <div class="horizontal-scroll" id="trending-songs">Loading Punjabi songs...</div>
+      <div class="horizontal-scroll" id="trending-songs">Loading Punjabi tracks...</div>
     </section>
   `;
 
   document.getElementById('see-latest').onclick = () => renderSearchPage(`punjabi latest hits`);
   document.getElementById('see-trending').onclick = () => renderSearchPage(`punjabi top songs`);
 
-  const latest = await fetchSongs(`punjabi latest hits`, 12);
-  const trending = await fetchSongs(`punjabi top songs`, 12);
+  const latest = await fetchSongs(`punjabi latest hits 2026`);
+  const trending = await fetchSongs(`punjabi top trending songs`);
 
   renderHorizontalCards('latest-releases', latest);
   renderHorizontalCards('trending-songs', trending);
@@ -103,7 +110,7 @@ function renderHorizontalCards(containerId, songs) {
   container.innerHTML = '';
 
   if (songs.length === 0) {
-    container.innerHTML = '<p style="color:#aaa; padding:10px;">No songs found.</p>';
+    container.innerHTML = '<p style="color:#aaa; padding:10px;">Connecting to YouTube Music server...</p>';
     return;
   }
 
@@ -120,7 +127,7 @@ function renderHorizontalCards(containerId, songs) {
   });
 }
 
-// 2. Spotify Search View
+// 2. Search Page Layout
 async function renderSearchPage(query, activeCategory = 'Top') {
   mainContent.innerHTML = `
     <div class="filter-chips">
@@ -130,7 +137,7 @@ async function renderSearchPage(query, activeCategory = 'Top') {
       <button class="chip ${activeCategory === 'Artists' ? 'active' : ''}" data-cat="Artists">Artists</button>
     </div>
 
-    <div id="search-body"><p style="color:#aaa;">Searching Punjabi tracks for "${query}"...</p></div>
+    <div id="search-body"><p style="color:#aaa;">Searching YouTube Music for "${query}"...</p></div>
   `;
 
   document.querySelectorAll('.filter-chips .chip').forEach(chip => {
@@ -140,12 +147,12 @@ async function renderSearchPage(query, activeCategory = 'Top') {
     };
   });
 
-  const activeSearchSongs = await fetchSongs(query, 30);
+  const activeSearchSongs = await fetchSongs(query);
   const searchBody = document.getElementById('search-body');
   if (!searchBody) return;
 
   if (activeSearchSongs.length === 0) {
-    searchBody.innerHTML = '<p style="color:#aaa; padding:20px 0;">No Punjabi tracks found. Try searching "Arjan Dhillon" or "Karan Aujla".</p>';
+    searchBody.innerHTML = '<p style="color:#aaa; padding:20px 0;">No Punjabi tracks found. Try searching another song name.</p>';
     return;
   }
 
@@ -156,7 +163,7 @@ async function renderSearchPage(query, activeCategory = 'Top') {
       <div class="top-result-card" id="top-card">
         <div>
           <h3>${topResult.artist}</h3>
-          <p>Punjabi Artist</p>
+          <p>YouTube Music Artist</p>
         </div>
         <div class="play-green-circle"><i class="fas fa-play"></i></div>
       </div>
@@ -176,7 +183,7 @@ async function renderSearchPage(query, activeCategory = 'Top') {
     renderArtistProfile(activeSearchSongs[0].artist, activeSearchSongs);
 
   } else {
-    searchBody.innerHTML = `<h3 style="margin-bottom:12px; font-size:1.1rem;">Punjabi Playlists</h3><div class="horizontal-scroll" id="playlist-cards"></div>`;
+    searchBody.innerHTML = `<h3 style="margin-bottom:12px; font-size:1.1rem;">Playlists</h3><div class="horizontal-scroll" id="playlist-cards"></div>`;
     renderHorizontalCards('playlist-cards', activeSearchSongs);
   }
 }
@@ -215,11 +222,6 @@ function renderTracksList(containerId, songs) {
 // 3. Artist Profile
 function renderArtistProfile(artistName, songs) {
   const topTracks = songs.slice(0, 5);
-  const albumsMap = {};
-  songs.forEach(s => {
-    if (!albumsMap[s.album]) albumsMap[s.album] = s;
-  });
-
   const heroImage = songs[0]?.cover || "https://picsum.photos/600/400";
 
   mainContent.innerHTML = `
@@ -235,12 +237,8 @@ function renderArtistProfile(artistName, songs) {
       </div>
     </div>
 
-    <h3 style="margin-bottom:12px; font-size:1.2rem;">Popular</h3>
+    <h3 style="margin-bottom:12px; font-size:1.2rem;">Popular Tracks</h3>
     <div id="artist-popular-list"></div>
-    <button class="see-all-outline" id="see-all-popular">See all</button>
-
-    <h3 style="margin:20px 0 12px 0; font-size:1.2rem;">Albums</h3>
-    <div class="albums-grid" id="artist-albums-grid"></div>
   `;
 
   document.getElementById('artist-shuffle-play').onclick = () => playFromList(songs, 0);
@@ -269,27 +267,9 @@ function renderArtistProfile(artistName, songs) {
     };
     popularContainer.appendChild(row);
   });
-
-  const albumGrid = document.getElementById('artist-albums-grid');
-  Object.values(albumsMap).forEach(alb => {
-    const card = document.createElement('div');
-    card.className = 'album-card';
-    card.innerHTML = `
-      <div class="album-card-img-wrapper">
-        <img src="${alb.cover}">
-        <div class="album-play-icon"><i class="fas fa-play" style="font-size:0.8rem;"></i></div>
-      </div>
-      <h4>${alb.album}</h4>
-      <p>${alb.artist}</p>
-    `;
-    card.onclick = () => playFromList(songs.filter(s => s.album === alb.album), 0);
-    albumGrid.appendChild(card);
-  });
-
-  document.getElementById('see-all-popular').onclick = () => renderSearchPage(artistName, 'Tracks');
 }
 
-// 4. Play Control & Queue
+// 4. Player Controls
 function playFromList(list, index) {
   currentQueue = [...list];
   currentSongIndex = index;
@@ -366,7 +346,7 @@ searchInput.addEventListener('input', (e) => {
   clearTimeout(searchTimeout);
   const query = e.target.value.trim();
   if (query.length > 2) {
-    searchTimeout = setTimeout(() => renderSearchPage(query), 400);
+    searchTimeout = setTimeout(() => renderSearchPage(query), 500);
   } else if (query.length === 0) {
     loadHomeContent();
   }
@@ -377,7 +357,7 @@ function updateMediaSession(song) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: song.title,
       artist: song.artist,
-      album: song.album || 'Punjabi Music',
+      album: 'YouTube Music Stream',
       artwork: [{ src: song.cover, sizes: '512x512', type: 'image/jpeg' }]
     });
 
@@ -395,7 +375,7 @@ function formatTime(secs) {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// Event Listeners
+// Listeners
 playBtn.onclick = () => audioElement.paused ? playSong() : pauseSong();
 miniPlayBtn.onclick = () => audioElement.paused ? playSong() : pauseSong();
 prevBtn.onclick = playPrev;
