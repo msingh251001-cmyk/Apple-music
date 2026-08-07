@@ -43,59 +43,28 @@ let currentQueue = [];
 let currentSongIndex = 0;
 let selectedContextSong = null;
 
-// Multi-API Punjabi Audio Fetcher
+// High-Speed Guaranteed Punjabi API
 async function fetchSongs(query, limit = 25) {
-  // Always append 'punjabi' to guarantee only Punjabi content
-  const searchQuery = query.toLowerCase().includes('punjabi') ? query : `punjabi ${query}`;
-
+  const searchQuery = query.toLowerCase().includes('punjabi') ? query : `${query} punjabi`;
+  
   try {
-    const res = await fetch(`https://saavn.dev/api/search/songs?query=${encodeURIComponent(searchQuery)}&limit=${limit}`);
+    const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&media=music&entity=song&limit=${limit}`);
     const data = await res.json();
-    if (data.success && data.data && data.data.results && data.data.results.length > 0) {
-      return parseResults(data.data.results);
+    
+    if (data.results && data.results.length > 0) {
+      return data.results.map(track => ({
+        id: track.trackId,
+        title: track.trackName,
+        artist: track.artistName,
+        album: track.collectionName || "Punjabi Single",
+        cover: track.artworkUrl100.replace('100x100bb', '500x500bb'),
+        src: track.previewUrl
+      }));
     }
   } catch (e) {
-    console.log("Saavn primary failed, trying backup...");
+    console.error("Fetch Error:", e);
   }
-
-  // Backup Proxy
-  try {
-    const proxyRes = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(`https://saavn.dev/api/search/songs?query=${encodeURIComponent(searchQuery)}&limit=${limit}`)}`);
-    const proxyData = await proxyRes.json();
-    const parsed = JSON.parse(proxyData.contents);
-    if (parsed.success && parsed.data && parsed.data.results) {
-      return parseResults(parsed.data.results);
-    }
-  } catch (err) {
-    console.log("Proxy failed...");
-  }
-
   return [];
-}
-
-function parseResults(results) {
-  return results.map(song => {
-    let streamUrl = '';
-    if (song.downloadUrl && song.downloadUrl.length > 0) {
-      const best = song.downloadUrl.find(d => d.quality === '320kbps') || song.downloadUrl[song.downloadUrl.length - 1];
-      streamUrl = best?.url || song.downloadUrl[0]?.url;
-    }
-
-    let imgUrl = '';
-    if (song.image && song.image.length > 0) {
-      const bestImg = song.image.find(i => i.quality === '500x500') || song.image[song.image.length - 1];
-      imgUrl = bestImg?.url || song.image[0]?.url;
-    }
-
-    return {
-      id: song.id,
-      title: song.name ? song.name.replace(/&quot;/g, '"').replace(/&amp;/g, '&') : "Unknown Track",
-      artist: song.primaryArtists || (song.artists?.primary ? song.artists.primary[0]?.name : "Popular Punjabi Artist"),
-      album: song.album?.name || "Punjabi Single",
-      cover: imgUrl || "https://picsum.photos/300/300",
-      src: streamUrl
-    };
-  }).filter(s => s.src !== '');
 }
 
 // 1. Home Page View
@@ -121,8 +90,8 @@ async function loadHomeContent() {
   document.getElementById('see-latest').onclick = () => renderSearchPage(`punjabi latest hits`);
   document.getElementById('see-trending').onclick = () => renderSearchPage(`punjabi top songs`);
 
-  const latest = await fetchSongs(`punjabi latest hits`, 10);
-  const trending = await fetchSongs(`punjabi top songs`, 10);
+  const latest = await fetchSongs(`punjabi latest hits`, 12);
+  const trending = await fetchSongs(`punjabi top songs`, 12);
 
   renderHorizontalCards('latest-releases', latest);
   renderHorizontalCards('trending-songs', trending);
@@ -134,7 +103,7 @@ function renderHorizontalCards(containerId, songs) {
   container.innerHTML = '';
 
   if (songs.length === 0) {
-    container.innerHTML = '<p style="color:#aaa; padding:10px;">Loading Punjabi songs...</p>';
+    container.innerHTML = '<p style="color:#aaa; padding:10px;">No songs found.</p>';
     return;
   }
 
@@ -151,7 +120,7 @@ function renderHorizontalCards(containerId, songs) {
   });
 }
 
-// 2. Search Page Layout
+// 2. Spotify Search View
 async function renderSearchPage(query, activeCategory = 'Top') {
   mainContent.innerHTML = `
     <div class="filter-chips">
@@ -161,7 +130,7 @@ async function renderSearchPage(query, activeCategory = 'Top') {
       <button class="chip ${activeCategory === 'Artists' ? 'active' : ''}" data-cat="Artists">Artists</button>
     </div>
 
-    <div id="search-body"><p style="color:#aaa;">Loading Punjabi tracks for "${query}"...</p></div>
+    <div id="search-body"><p style="color:#aaa;">Searching Punjabi tracks for "${query}"...</p></div>
   `;
 
   document.querySelectorAll('.filter-chips .chip').forEach(chip => {
@@ -176,7 +145,7 @@ async function renderSearchPage(query, activeCategory = 'Top') {
   if (!searchBody) return;
 
   if (activeSearchSongs.length === 0) {
-    searchBody.innerHTML = '<p style="color:#aaa; padding:20px 0;">No Punjabi tracks found. Try searching another artist like "Arjan Dhillon" or "Karan Aujla".</p>';
+    searchBody.innerHTML = '<p style="color:#aaa; padding:20px 0;">No Punjabi tracks found. Try searching "Arjan Dhillon" or "Karan Aujla".</p>';
     return;
   }
 
@@ -320,7 +289,7 @@ function renderArtistProfile(artistName, songs) {
   document.getElementById('see-all-popular').onclick = () => renderSearchPage(artistName, 'Tracks');
 }
 
-// 4. Player Control & Queue
+// 4. Play Control & Queue
 function playFromList(list, index) {
   currentQueue = [...list];
   currentSongIndex = index;
@@ -426,7 +395,7 @@ function formatTime(secs) {
   return `${m}:${s < 10 ? '0' : ''}${s}`;
 }
 
-// Listeners
+// Event Listeners
 playBtn.onclick = () => audioElement.paused ? playSong() : pauseSong();
 miniPlayBtn.onclick = () => audioElement.paused ? playSong() : pauseSong();
 prevBtn.onclick = playPrev;
