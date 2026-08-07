@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Apple Music Web Style</title>
+  <title>Spotify & Apple Hybrid Music</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-  <!-- Liquid Background Gradients -->
+  <!-- Liquid Animated Background -->
   <div class="liquid-bg">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
@@ -18,9 +18,9 @@
 
   <div class="app-container">
     
-    <!-- Top Navigation -->
+    <!-- Header -->
     <header class="top-bar">
-      <div class="logo" id="home-logo" style="cursor: pointer;"><i class="fa-brands fa-apple"></i> Music</div>
+      <div class="logo" id="home-logo"><i class="fa-brands fa-apple"></i> Music</div>
       <div class="search-box">
         <i class="fas fa-search"></i>
         <input type="text" id="search-input" placeholder="Search songs, artists, albums...">
@@ -28,34 +28,20 @@
       <button id="settings-btn" class="icon-btn"><i class="fas fa-gear"></i></button>
     </header>
 
-    <!-- Main Dynamic Content Area -->
+    <!-- Dynamic Main Content Area -->
     <main class="content-area" id="main-content">
-      <section class="section">
-        <div class="section-header">
-          <h2>Latest Releases</h2>
-          <button class="see-all-btn" id="see-all-latest">See All <i class="fas fa-chevron-right"></i></button>
-        </div>
-        <div class="horizontal-scroll" id="latest-releases"></div>
-      </section>
-
-      <section class="section">
-        <div class="section-header">
-          <h2>Trending Now</h2>
-          <button class="see-all-btn" id="see-all-trending">See All <i class="fas fa-chevron-right"></i></button>
-        </div>
-        <div class="horizontal-scroll" id="trending-songs"></div>
-      </section>
+      <!-- Injected via JavaScript -->
     </main>
 
-    <!-- Context Menu Modal (3 Dots Action Popup) -->
+    <!-- Context Modal (3 Dots Menu) -->
     <div class="modal" id="context-modal">
       <div class="modal-content context-box">
         <h4 id="context-song-title">Song Title</h4>
         <p id="context-song-artist">Artist Name</p>
         <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:15px 0;">
-        <button id="btn-play-next" class="menu-action-btn"><i class="fas fa-arrow-right-to-city"></i> Play Next</button>
+        <button id="btn-play-next" class="menu-action-btn"><i class="fas fa-forward"></i> Play Next</button>
         <button id="btn-add-queue" class="menu-action-btn"><i class="fas fa-list"></i> Add to Queue</button>
-        <button id="close-context" class="primary-btn" style="margin-top:15px; background:#444;">Cancel</button>
+        <button id="close-context" class="primary-btn" style="margin-top:15px; background:#333;">Cancel</button>
       </div>
     </div>
 
@@ -63,7 +49,7 @@
     <div class="modal" id="settings-modal">
       <div class="modal-content">
         <h3>Content Language</h3>
-        <p>Select your primary music preference:</p>
+        <p>Select your music preference:</p>
         <select id="language-select">
           <option value="punjabi" selected>Punjabi</option>
           <option value="hindi">Hindi</option>
@@ -73,7 +59,7 @@
       </div>
     </div>
 
-    <!-- Full Screen Player Overlay -->
+    <!-- Player Screen Overlay -->
     <div class="player-overlay" id="player-overlay">
       <button id="close-player" class="close-btn"><i class="fas fa-chevron-down"></i></button>
       
@@ -111,34 +97,33 @@
         </div>
       </div>
 
-      <!-- Up Next Queue Slide-Up Sheet -->
+      <!-- Up Next Queue Drawer -->
       <div class="queue-sheet" id="queue-sheet">
         <div class="queue-header">
           <h3>Up Next Queue</h3>
           <button id="close-queue" class="icon-btn"><i class="fas fa-xmark"></i></button>
         </div>
-        <div class="queue-list" id="queue-list-container">
-          <!-- Live Queue Items -->
-        </div>
+        <div class="queue-list" id="queue-list-container"></div>
       </div>
     </div>
 
-    <!-- Mini Player Bar -->
+    <!-- Mini Player Bar at Bottom -->
     <div class="mini-player" id="mini-player">
       <img src="https://via.placeholder.com/50" id="mini-cover" alt="Cover">
       <div class="mini-info">
-        <h4 id="mini-title">No Song Selected</h4>
-        <p id="mini-artist">Select a song to play</p>
+        <h4 id="mini-title">Select a Song</h4>
+        <p id="mini-artist">Spotify & Apple Style</p>
       </div>
       <div class="mini-controls">
         <button id="mini-play-btn"><i class="fas fa-play"></i></button>
       </div>
     </div>
 
+    <!-- Native Audio -->
     <audio id="audio-element" crossorigin="anonymous"></audio>
 
   </div>
 
   <script src="script.js"></script>
 </body>
-          </html>
+</html>
